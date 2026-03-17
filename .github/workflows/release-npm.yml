@@ -84,9 +84,8 @@ jobs:
 
       - name: Build native addon (Docker)
         if: matrix.settings.docker
-        working-directory: lylacore-native/crates/napi-bindings
         run: |
-          docker run --rm -v $(pwd):/build -w /build ${{ matrix.settings.docker }} \
+          docker run --rm -v ${{ github.workspace }}/lylacore-native/crates/napi-bindings:/build -w /build ${{ matrix.settings.docker }} \
             sh -c "npm run build -- --target ${{ matrix.settings.target }}"
 
       - name: Build native addon (Native)
@@ -145,7 +144,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish platform packages
-        working-directory: crates/napi-bindings
+        working-directory: lylacore-native/crates/napi-bindings
         run: |
           for pkg in npm/@lylacore/*; do
             if [ -d "$pkg" ]; then
