@@ -145,6 +145,10 @@ jobs:
           done
           ls -lh lylacore-native/crates/napi-bindings/*.node
 
+      - name: Install dependencies
+        working-directory: lylacore-native/crates/napi-bindings
+        run: npm install
+
       - name: Publish to npm
         working-directory: lylacore-native/crates/napi-bindings
         env:
