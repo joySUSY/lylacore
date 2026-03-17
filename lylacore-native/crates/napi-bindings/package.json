@@ -1,6 +1,6 @@
 {
   "name": "@lylacore/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Node.js native bindings for Lylacore (soul-crypto + coach-engine)",
   "main": "index.js",
   "types": "index.d.ts",
@@ -43,7 +43,7 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@napi-rs/cli": "^2.18.0"
+    "@napi-rs/cli": "^3.0.0"
   },
   "engines": {
     "node": ">= 18"

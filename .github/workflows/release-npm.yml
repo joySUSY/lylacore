@@ -1,5 +1,6 @@
 # Authors: Joysusy & Violet Klaudia 💖
 # npm Release Pipeline - Build and Publish Node.js Native Addons
+# Based on NAPI-RS official cross-build example
 
 name: Release npm
 
@@ -10,94 +11,98 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  MACOSX_DEPLOYMENT_TARGET: '10.13'
 
 jobs:
-  # Build native addons for all platforms
+  # Build all native addons on Linux using cross-compilation
   build-native:
     name: Build ${{ matrix.settings.target }}
-    runs-on: ${{ matrix.settings.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         settings:
-          # Linux x64
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            package: linux-x64-gnu
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            package: linux-x64-musl
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
-
-          # Linux ARM64
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            package: linux-arm64-gnu
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-            package: linux-arm64-musl
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine-aarch64
-
-          # macOS x64
-          - os: macos-latest
-            target: x86_64-apple-darwin
+          # macOS targets (cross-compile with -x flag)
+          - target: x86_64-apple-darwin
             package: darwin-x64
-
-          # macOS ARM64 (Apple Silicon)
-          - os: macos-latest
-            target: aarch64-apple-darwin
+          - target: aarch64-apple-darwin
             package: darwin-arm64
 
-          # Windows x64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
+          # Windows targets (cross-compile with -x flag)
+          - target: x86_64-pc-windows-msvc
             package: win32-x64-msvc
-
-          # Windows ARM64
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
+          - target: aarch64-pc-windows-msvc
             package: win32-arm64-msvc
+
+          # Linux GNU targets (use --use-napi-cross)
+          - target: x86_64-unknown-linux-gnu
+            package: linux-x64-gnu
+          - target: aarch64-unknown-linux-gnu
+            package: linux-arm64-gnu
+
+          # Linux musl targets (cross-compile with -x flag)
+          - target: x86_64-unknown-linux-musl
+            package: linux-x64-musl
+          - target: aarch64-unknown-linux-musl
+            package: linux-arm64-musl
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Cache cargo and build artifacts
+        uses: actions/cache@v4
         with:
-          node-version: '20'
+          path: |
+            ~/.cargo
+            ${{ github.workspace }}/.xwin
+            ~/.napi-rs
+            ./target
+          key: ${{ matrix.settings.target }}-cargo-cache
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.settings.target }}
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          shared-key: release-${{ matrix.settings.target }}
-          workspaces: lylacore-native/crates/napi-bindings
+          node-version: '20'
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: 0.13.0
+
+      - name: Install cargo cross-compilation tools
+        uses: taiki-e/install-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tool: cargo-zigbuild,cargo-xwin
 
       - name: Install dependencies
         working-directory: lylacore-native/crates/napi-bindings
         run: npm install
 
-      - name: Build native addon (Docker)
-        if: matrix.settings.docker
-        run: |
-          docker run --rm -v ${{ github.workspace }}/lylacore-native/crates/napi-bindings:/build -w /build ${{ matrix.settings.docker }} \
-            sh -c "npm run build -- --target ${{ matrix.settings.target }}"
-
-      - name: Build native addon (Native)
-        if: ${{ !matrix.settings.docker }}
+      - name: Build native addon (musl/macOS/Windows)
+        if: contains(matrix.settings.target, 'musl') || contains(matrix.settings.target, 'darwin') || contains(matrix.settings.target, 'windows')
         working-directory: lylacore-native/crates/napi-bindings
-        run: npm run build -- --target ${{ matrix.settings.target }}
+        run: npm run build -- --release --target ${{ matrix.settings.target }} -x
+        env:
+          XWIN_CACHE_DIR: ${{ github.workspace }}/.xwin
+
+      - name: Build native addon (Linux GNU)
+        if: contains(matrix.settings.target, 'linux-gnu')
+        working-directory: lylacore-native/crates/napi-bindings
+        run: npm run build -- --release --target ${{ matrix.settings.target }} --use-napi-cross
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: bindings-${{ matrix.settings.package }}
           path: lylacore-native/crates/napi-bindings/*.node
+          if-no-files-found: error
 
   # Publish to npm registry
   publish-npm:
@@ -133,9 +138,7 @@ jobs:
 
       - name: Create platform packages
         working-directory: lylacore-native/crates/napi-bindings
-        run: |
-          # Create platform-specific packages
-          npm run artifacts
+        run: npm run artifacts
 
       - name: Publish main package
         working-directory: lylacore-native/crates/napi-bindings
