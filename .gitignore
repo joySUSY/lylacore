@@ -60,3 +60,10 @@ htmlcov/
 # Build artifacts
 *.whl
 *.tar.gz
+
+# Test outputs and logs
+test_output_*.log
+*.log
+
+# Native binaries (should be built, not committed)
+index.node
