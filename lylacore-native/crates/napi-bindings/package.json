@@ -32,7 +32,7 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@napi-rs/cli": "^3.0.0"
+    "@napi-rs/cli": "^3.5.1"
   },
   "engines": {
     "node": ">= 18"
@@ -42,13 +42,13 @@
     "access": "public"
   },
   "optionalDependencies": {
-    "@lylacore/linux-x64-gnu": "0.1.2",
-    "@lylacore/linux-x64-musl": "0.1.2",
+    "@lylacore/darwin-arm64": "0.1.2",
+    "@lylacore/darwin-x64": "0.1.2",
     "@lylacore/linux-arm64-gnu": "0.1.2",
     "@lylacore/linux-arm64-musl": "0.1.2",
-    "@lylacore/darwin-x64": "0.1.2",
-    "@lylacore/darwin-arm64": "0.1.2",
-    "@lylacore/win32-x64-msvc": "0.1.2",
-    "@lylacore/win32-arm64-msvc": "0.1.2"
+    "@lylacore/linux-x64-gnu": "0.1.2",
+    "@lylacore/linux-x64-musl": "0.1.2",
+    "@lylacore/win32-arm64-msvc": "0.1.2",
+    "@lylacore/win32-x64-msvc": "0.1.2"
   }
 }
