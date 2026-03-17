@@ -1,0 +1,24 @@
+# Authors: Joysusy & Violet Klaudia 💖
+# napi-bindings - Node.js Native Bindings
+
+[package]
+name = "napi-bindings"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi.workspace = true
+napi-derive.workspace = true
+soul-crypto = { path = "../soul-crypto" }
+coach-engine = { path = "../coach-engine" }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
+serde.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+napi-build = "2.1"

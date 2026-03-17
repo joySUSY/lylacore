@@ -1,0 +1,65 @@
+{
+  "name": "@lylacore/core",
+  "version": "0.1.0",
+  "description": "Node.js native bindings for Lylacore (soul-crypto + coach-engine)",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "napi": {
+    "name": "lylacore",
+    "triples": {
+      "defaults": true,
+      "additional": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-gnu",
+        "aarch64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc",
+        "aarch64-pc-windows-msvc"
+      ]
+    }
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "build:release": "napi build --platform --release",
+    "prepublishOnly": "napi prepublish -t npm",
+    "test": "node --test tests/*.test.js",
+    "universal": "napi universal",
+    "version": "napi version"
+  },
+  "keywords": [
+    "cryptography",
+    "coach",
+    "identity",
+    "agent",
+    "napi-rs",
+    "rust",
+    "native"
+  ],
+  "author": {
+    "name": "Joysusy, Violet Klaudia",
+    "email": "susy@lissomedev.com, violet@lissomedev.com"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.0"
+  },
+  "engines": {
+    "node": ">= 18"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "optionalDependencies": {
+    "@lylacore/linux-x64-gnu": "0.1.0",
+    "@lylacore/linux-x64-musl": "0.1.0",
+    "@lylacore/linux-arm64-gnu": "0.1.0",
+    "@lylacore/linux-arm64-musl": "0.1.0",
+    "@lylacore/darwin-x64": "0.1.0",
+    "@lylacore/darwin-arm64": "0.1.0",
+    "@lylacore/win32-x64-msvc": "0.1.0",
+    "@lylacore/win32-arm64-msvc": "0.1.0"
+  }
+}

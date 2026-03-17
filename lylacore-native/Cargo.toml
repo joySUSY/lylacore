@@ -1,0 +1,39 @@
+# Authors: Joysusy & Violet Klaudia 💖
+# Lylacore Native (Rust) Workspace - Root Configuration
+
+[workspace]
+members = [
+    "crates/soul-crypto",
+    "crates/coach-engine",
+    "crates/napi-bindings",
+    "crates/pyo3-bindings",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Joysusy <susy@lissomedev.com>", "Violet Klaudia <violet@lissomedev.com>"]
+license = "MIT"
+keywords = ["lylacore", "cryptography", "coach-engine", "agent-memory", "ai-agent-memory"]
+
+[workspace.dependencies]
+argon2 = "0.5"
+aes-gcm = "0.10"
+rand = "0.8"
+thiserror = "1.0"
+tokio = { version = "1.0", features = ["rt", "macros", "rt-multi-thread"] }
+napi = { version = "2.16", features = ["tokio_rt"] }
+napi-derive = "2.16"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true

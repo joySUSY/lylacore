@@ -1,0 +1,24 @@
+# Authors: Joysusy & Violet Klaudia 💖
+
+[package]
+name = "lylacore-pyo3"
+version = "0.1.0"
+edition = "2021"
+authors = ["Joysusy <susy@lissomedev.com>", "Violet Klaudia <violet@lissomedev.com>"]
+license = "MIT"
+description = "Python bindings for Lylacore (soul-crypto + coach-engine)"
+
+[lib]
+name = "lylacore"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
+pyo3-async-runtimes = { version = "0.22", features = ["tokio-runtime"] }
+soul-crypto = { path = "../soul-crypto" }
+coach-engine = { path = "../coach-engine" }
+tokio = { version = "1.40", features = ["rt", "rt-multi-thread"] }
+hex = "0.4"
+
+[build-dependencies]
+pyo3-build-config = "0.22"

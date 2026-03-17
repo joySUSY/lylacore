@@ -1,0 +1,16 @@
+{
+  "name": "lylacore-benchmarks",
+  "version": "0.1.0",
+  "description": "Performance benchmarks for Lylacore Node.js bindings",
+  "private": true,
+  "scripts": {
+    "bench": "node benchmark_soul_crypto.js && node benchmark_coach_engine.js",
+    "bench:crypto": "node benchmark_soul_crypto.js",
+    "bench:coach": "node benchmark_coach_engine.js"
+  },
+  "author": {
+    "name": "Joysusy, Violet Klaudia",
+    "email": "susy@lissomedev.com, violet@lissomedev.com"
+  },
+  "license": "MIT"
+}

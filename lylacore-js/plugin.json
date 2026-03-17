@@ -1,0 +1,14 @@
+{
+  "name": "lylacore-js",
+  "version": "1.0.0",
+  "description": "Lylacore JavaScript SDK — foundational identity architecture for AI agents with Mind Schema, COACH Protocol, and Soul Package Format",
+  "author": {
+    "name": "Joysusy & Violet Klaudia"
+  },
+  "license": "MIT",
+  "keywords": ["lylacore", "agent-identity", "mind-schema", "coach-protocol", "soul-package", "javascript", "agent-memory", "claude-code-plugin", "ai-agent-memory", "long-term-memory"],
+  "commands": "./commands",
+  "skills": "./skills",
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json"
+}

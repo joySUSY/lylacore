@@ -1,0 +1,52 @@
+[package]
+name = "soul-crypto"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+argon2.workspace = true
+aes-gcm.workspace = true
+rand.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+zeroize = "1.7"
+pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
+sha2 = "0.10"
+scrypt = "0.11"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "test-util"] }
+hex = "0.4"
+criterion = "0.5"
+serde_json = "1.0"
+rand = { workspace = true }
+
+[[bench]]
+name = "crypto_bench"
+harness = false
+
+[[test]]
+name = "concurrency"
+path = "../../tests/integration/concurrency.rs"
+
+[[test]]
+name = "ffi_errors"
+path = "../../tests/integration/ffi_errors.rs"
+
+[[test]]
+name = "ffi_memory"
+path = "../../tests/integration/ffi_memory.rs"
+
+[[test]]
+name = "ffi_types"
+path = "../../tests/integration/ffi_types.rs"
+
+[[test]]
+name = "performance"
+path = "../../tests/integration/performance.rs"
+
+[[test]]
+name = "roundtrip"
+path = "../../tests/integration/roundtrip.rs"
