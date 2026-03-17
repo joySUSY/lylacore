@@ -67,3 +67,21 @@ test_output_*.log
 
 # Native binaries (should be built, not committed)
 index.node
+
+# Development process documents (NOT for git)
+.reference/
+.plan_records/
+.agents/
+_research/
+*_REPORT.md
+*_REVIEW.md
+*_PLAN.md
+*_SUMMARY.md
+*_COMPLETE.md
+*_RESEARCH.md
+*_ANALYSIS.md
+*_DIAGRAM.md
+*_TABLE.md
+*_ROADMAP.md
+PUBLISHING_SETUP.md
+SETUP_CHECKLIST.md
