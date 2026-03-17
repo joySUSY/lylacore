@@ -133,17 +133,17 @@ jobs:
         with:
           path: artifacts
 
-      - name: Move artifacts to package directory
+      - name: Move artifacts to npm directory structure
         run: |
-          mkdir -p lylacore-native/crates/napi-bindings/artifacts
-          # Move artifacts to artifacts directory with platform-specific names for napi artifacts to pick up
+          # Create npm/<platform> directories as expected by napi artifacts
           for dir in artifacts/bindings-*; do
             if [ -d "$dir" ]; then
               pkg_name=$(basename "$dir" | sed 's/bindings-//')
-              cp -v "$dir"/*.node "lylacore-native/crates/napi-bindings/artifacts/lylacore.$pkg_name.node"
+              mkdir -p "lylacore-native/crates/napi-bindings/npm/$pkg_name"
+              cp -v "$dir"/*.node "lylacore-native/crates/napi-bindings/npm/$pkg_name/"
             fi
           done
-          ls -R lylacore-native/crates/napi-bindings/artifacts
+          ls -R lylacore-native/crates/napi-bindings/npm
 
       - name: Install dependencies
         working-directory: lylacore-native/crates/napi-bindings

@@ -67,6 +67,12 @@ test_output_*.log
 
 # Native binaries (should be built, not committed)
 index.node
+npm/
+artifacts/
+
+# Release scripts (local use only)
+scripts/release.sh
+scripts/release.ps1
 
 # Development process documents (NOT for git)
 .reference/
