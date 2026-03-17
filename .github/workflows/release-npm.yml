@@ -1,6 +1,6 @@
 # Authors: Joysusy & Violet Klaudia 💖
 # npm Release Pipeline - Build and Publish Node.js Native Addons
-# Based on NAPI-RS Official Template (Docker for Linux cross-compilation)
+# Based on NAPI-RS v3 Official Template (Native Cross-Compilation)
 
 name: Release npm
 
@@ -99,7 +99,7 @@ jobs:
         run: |
           if [[ "${{ matrix.settings.target }}" == *"musl"* ]]; then
             npm run build -- --target ${{ matrix.settings.target }} -x
-          elif [[ "${{ matrix.settings.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+          elif [[ "${{ matrix.settings.target }}" == *"linux-gnu"* ]]; then
             npm run build -- --target ${{ matrix.settings.target }} --use-napi-cross
           else
             npm run build -- --target ${{ matrix.settings.target }}
