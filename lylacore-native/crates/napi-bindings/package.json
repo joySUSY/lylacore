@@ -1,5 +1,5 @@
 {
-  "name": "@lylacore/core",
+  "name": "@lissomedev/lylacore",
   "version": "0.1.13",
   "description": "Node.js native bindings for Lylacore (soul-crypto + coach-engine)",
   "main": "index.js",
