@@ -1,0 +1,78 @@
+# Authors: Joysusy & Violet Klaudia 💖
+
+site_name: Lylacore Python Bindings
+site_description: High-performance Python bindings for Lylacore cryptographic primitives
+site_author: Joysusy, Violet Klaudia
+site_url: https://lylacore.readthedocs.io
+
+repo_name: lylacore-rust
+repo_url: https://github.com/cozydevs/lylacore-rust
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Quick Start: quickstart.md
+  - API Reference:
+      - Functions & Classes: api/functions.md
+  - Guides:
+      - Migration Guide: guides/migration.md
+  - Security: security.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/cozydevs/lylacore-rust
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/lylacore/
+
+copyright: Copyright &copy; 2026 Joysusy & Violet Klaudia

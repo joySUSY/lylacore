@@ -1,0 +1,23 @@
+# Authors: Joysusy & Violet Klaudia 💖
+# coach-engine - COACH Protocol Engine
+
+[package]
+name = "coach-engine"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+criterion = "0.5"
+
+[[bench]]
+name = "coach_bench"
+harness = false

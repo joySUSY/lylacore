@@ -1,0 +1,297 @@
+# Authors: Joysusy & Violet Klaudia 💖
+# Main CI Pipeline - Unified Testing for Rust, Python, and Node.js
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Fast feedback - runs first to catch obvious issues
+  rust-check:
+    name: Rust Check (fmt, clippy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: rust-check
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Check compilation
+        run: cargo check --workspace --all-features
+
+  # Rust core tests
+  test-rust:
+    name: Test Rust (${{ matrix.os }})
+    needs: rust-check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: test-rust-${{ matrix.os }}
+
+      - name: Run tests
+        run: cargo test --workspace --all-features
+
+  # Python bindings tests - Unit tests
+  test-python-unit:
+    name: Test Python Unit (${{ matrix.os }}, py${{ matrix.python-version }})
+    needs: rust-check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: test-python-${{ matrix.os }}
+          workspaces: crates/pyo3-bindings
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Build and install package
+        working-directory: crates/pyo3-bindings
+        run: |
+          uv venv
+          uv pip install maturin pytest pytest-asyncio pytest-timeout hypothesis
+
+      - name: Build wheel
+        working-directory: crates/pyo3-bindings
+        run: |
+          source .venv/bin/activate || .venv\Scripts\activate
+          maturin develop --release
+
+      - name: Run unit tests
+        working-directory: crates/pyo3-bindings
+        run: |
+          source .venv/bin/activate || .venv\Scripts\activate
+          pytest tests/ -v -m "not slow and not property and not memory"
+
+  # Python bindings tests - Property-based tests
+  test-python-property:
+    name: Test Python Property (${{ matrix.os }}, py${{ matrix.python-version }})
+    needs: rust-check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: test-python-${{ matrix.os }}
+          workspaces: crates/pyo3-bindings
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Build and install package
+        working-directory: crates/pyo3-bindings
+        run: |
+          uv venv
+          uv pip install maturin pytest pytest-asyncio pytest-timeout hypothesis
+
+      - name: Build wheel
+        working-directory: crates/pyo3-bindings
+        run: |
+          source .venv/bin/activate || .venv\Scripts\activate
+          maturin develop --release
+
+      - name: Run property-based tests
+        working-directory: crates/pyo3-bindings
+        timeout-minutes: 15
+        env:
+          CI: true
+        run: |
+          source .venv/bin/activate || .venv\Scripts\activate
+          pytest tests/ -v -m property --hypothesis-show-statistics
+
+  # Python bindings tests - Memory leak detection (Linux only)
+  test-python-memory:
+    name: Test Python Memory (ubuntu-latest, py${{ matrix.python-version }})
+    needs: rust-check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/pyo3-bindings
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Build and install package
+        working-directory: crates/pyo3-bindings
+        run: |
+          uv venv
+          uv pip install maturin pytest pytest-asyncio pytest-timeout pytest-memray hypothesis
+
+      - name: Build wheel
+        working-directory: crates/pyo3-bindings
+        run: |
+          source .venv/bin/activate
+          maturin develop --release
+
+      - name: Run memory leak tests
+        working-directory: crates/pyo3-bindings
+        timeout-minutes: 10
+        run: |
+          source .venv/bin/activate
+          pytest tests/ -v -m memory
+
+      - name: Upload memray profiles on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: memray-profiles-py${{ matrix.python-version }}
+          path: crates/pyo3-bindings/*.bin
+          retention-days: 7
+
+  # Node.js bindings tests
+  test-nodejs:
+    name: Test Node.js (${{ matrix.os }}, node${{ matrix.node-version }})
+    needs: rust-check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: ['18', '20']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: test-nodejs-${{ matrix.os }}
+          workspaces: crates/napi-bindings
+
+      - name: Install dependencies
+        working-directory: crates/napi-bindings
+        run: npm install
+
+      - name: Build native addon
+        working-directory: crates/napi-bindings
+        run: npm run build
+
+      - name: Run tests
+        working-directory: crates/napi-bindings
+        run: npm test
+
+  # Code coverage (Python bindings only for now)
+  coverage:
+    name: Code Coverage
+    needs: rust-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/pyo3-bindings
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Build and test with coverage
+        working-directory: crates/pyo3-bindings
+        run: |
+          uv venv
+          uv pip install maturin pytest pytest-cov
+          source .venv/bin/activate
+          maturin develop --release
+          pytest tests/ --cov=lylacore --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: crates/pyo3-bindings/coverage.xml
+          flags: python
+          fail_ci_if_error: false

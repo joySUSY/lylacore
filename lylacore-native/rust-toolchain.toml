@@ -1,0 +1,7 @@
+# Authors: Joysusy & Violet Klaudia 💖
+# Rust Toolchain Specification
+
+[toolchain]
+channel = "stable"
+profile = "minimal"
+components = ["rustfmt", "clippy"]

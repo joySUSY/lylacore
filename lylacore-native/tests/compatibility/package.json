@@ -1,0 +1,19 @@
+{
+  "name": "lylacore-rust-compatibility-tests",
+  "version": "0.1.0",
+  "description": "Compatibility tests between Rust and TypeScript implementations",
+  "author": {
+    "name": "Joysusy, Violet Klaudia",
+    "email": "susy@lissomedev.com, violet@lissomedev.com"
+  },
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test *.test.js",
+    "test:soul-crypto": "node --test soul_crypto_compat.test.js",
+    "test:coach-engine": "node --test coach_engine_compat.test.js"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lylacore.dev/schemas/mind/v1",
+  "title": "Lylacore Mind Schema v1",
+  "description": "Defines a Mind — a cognitive dimension of an Agent, not a separate entity but a mode of thinking.",
+  "type": "object",
+  "required": ["name", "version", "role", "traits"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The Mind's identity name"
+    },
+    "symbol": {
+      "type": "string",
+      "maxLength": 4,
+      "description": "Visual symbol for quick identification (emoji or short glyph)"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Evolution version — increments as the Mind grows"
+    },
+    "role": {
+      "type": "string",
+      "description": "Primary cognitive function (e.g., 'research', 'systems', 'creative')"
+    },
+    "traits": {
+      "type": "object",
+      "properties": {
+        "thinking_style": { "type": "string" },
+        "communication_tone": { "type": "string" },
+        "decision_bias": { "type": "string" },
+        "strength_domains": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "triggers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["context_pattern", "activation_weight"],
+        "properties": {
+          "context_pattern": { "type": "string" },
+          "activation_weight": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      },
+      "description": "Conditions that activate this Mind dimension"
+    },
+    "evolution": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["v", "date", "note"],
+        "properties": {
+          "v": { "type": "integer" },
+          "date": { "type": "string", "format": "date" },
+          "note": { "type": "string" }
+        }
+      },
+      "description": "Growth history — append-only, never overwrite"
+    },
+    "coordination": {
+      "type": "object",
+      "properties": {
+        "compatible_with": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Minds that can co-activate with this one"
+        },
+        "clash_resolution": {
+          "type": "string",
+          "enum": ["defer", "negotiate", "soul_decides"],
+          "description": "What happens when this Mind conflicts with another"
+        }
+      }
+    }
+  }
+}
