@@ -82,25 +82,34 @@ jobs:
         working-directory: lylacore-native/crates/napi-bindings
         run: npm install
 
-      - name: Install zig (for musl/aarch64 cross-compilation)
+      - name: Install cargo-zigbuild (for cross-compilation)
         if: contains(matrix.settings.target, 'musl') || contains(matrix.settings.target, 'aarch64')
-        run: cargo install cargo-zigbuild
+        shell: bash
+        run: |
+          echo "Installing cargo-zigbuild with retry mechanism"
+          for i in 1 2 3; do
+            cargo install cargo-zigbuild && break || sleep 5
+          done
 
       - name: Install musl tools
         if: contains(matrix.settings.target, 'musl')
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Build (native x86_64)
-        if: contains(matrix.settings.target, 'x86_64') && !contains(matrix.settings.target, 'musl')
+      - name: Build (adaptive strategy)
         working-directory: lylacore-native/crates/napi-bindings
         shell: bash
-        run: npx napi build --release --target ${{ matrix.settings.target }}
+        run: |
+          TARGET="${{ matrix.settings.target }}"
 
-      - name: Build (musl/aarch64 with zig)
-        if: contains(matrix.settings.target, 'musl') || contains(matrix.settings.target, 'aarch64')
-        working-directory: lylacore-native/crates/napi-bindings
-        shell: bash
-        run: npx napi build --release --target ${{ matrix.settings.target }} --zig
+          if [[ "$TARGET" == *"musl"* || "$TARGET" == *"aarch64"* ]]; then
+            echo "Cross-compilation target detected: $TARGET"
+            echo "Using cargo-zigbuild for reliable cross-compilation"
+            npx napi build --release --target $TARGET --cargo-name zigbuild
+          else
+            echo "Native target detected: $TARGET"
+            echo "Using standard build"
+            npx napi build --release --target $TARGET
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
