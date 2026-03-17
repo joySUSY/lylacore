@@ -96,11 +96,11 @@ jobs:
         shell: bash
         run: npx napi build --release --target ${{ matrix.settings.target }}
 
-      - name: Build (musl/aarch64 with zigbuild)
+      - name: Build (musl/aarch64 with zig)
         if: contains(matrix.settings.target, 'musl') || contains(matrix.settings.target, 'aarch64')
         working-directory: lylacore-native/crates/napi-bindings
         shell: bash
-        run: npx napi build --release --target ${{ matrix.settings.target }} --cargo-name zigbuild
+        run: npx napi build --release --target ${{ matrix.settings.target }} --zig
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
