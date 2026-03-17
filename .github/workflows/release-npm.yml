@@ -1,0 +1,207 @@
+# Authors: Joysusy & Violet Klaudia 💖
+# npm Release Pipeline - Build and Publish Node.js Native Addons
+
+name: Release npm
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Build native addons for all platforms
+  build-native:
+    name: Build ${{ matrix.settings.target }}
+    runs-on: ${{ matrix.settings.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          # Linux x64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            package: linux-x64-gnu
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            package: linux-x64-musl
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+
+          # Linux ARM64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            package: linux-arm64-gnu
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            package: linux-arm64-musl
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine-aarch64
+
+          # macOS x64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            package: darwin-x64
+
+          # macOS ARM64 (Apple Silicon)
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            package: darwin-arm64
+
+          # Windows x64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            package: win32-x64-msvc
+
+          # Windows ARM64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            package: win32-arm64-msvc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.settings.target }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-${{ matrix.settings.target }}
+          workspaces: lylacore-native/crates/napi-bindings
+
+      - name: Install dependencies
+        working-directory: lylacore-native/crates/napi-bindings
+        run: npm install
+
+      - name: Build native addon (Docker)
+        if: matrix.settings.docker
+        working-directory: lylacore-native/crates/napi-bindings
+        run: |
+          docker run --rm -v $(pwd):/build -w /build ${{ matrix.settings.docker }} \
+            sh -c "npm run build -- --target ${{ matrix.settings.target }}"
+
+      - name: Build native addon (Native)
+        if: ${{ !matrix.settings.docker }}
+        working-directory: lylacore-native/crates/napi-bindings
+        run: npm run build -- --target ${{ matrix.settings.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-${{ matrix.settings.package }}
+          path: lylacore-native/crates/napi-bindings/*.node
+
+  # Publish to npm registry
+  publish-npm:
+    name: Publish to npm
+    needs: build-native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Move artifacts to package
+        run: |
+          mkdir -p lylacore-native/crates/napi-bindings/npm
+          for dir in artifacts/bindings-*; do
+            if [ -d "$dir" ]; then
+              cp "$dir"/*.node lylacore-native/crates/napi-bindings/npm/ || true
+            fi
+          done
+
+      - name: Install dependencies
+        working-directory: lylacore-native/crates/napi-bindings
+        run: npm install
+
+      - name: Create platform packages
+        working-directory: lylacore-native/crates/napi-bindings
+        run: |
+          # Create platform-specific packages
+          npm run artifacts
+
+      - name: Publish main package
+        working-directory: lylacore-native/crates/napi-bindings
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish platform packages
+        working-directory: crates/napi-bindings
+        run: |
+          for pkg in npm/@lylacore/*; do
+            if [ -d "$pkg" ]; then
+              cd "$pkg"
+              npm publish --access public
+              cd -
+            fi
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # Create GitHub Release
+  create-release:
+    name: Create GitHub Release
+    needs: publish-npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release v${{ steps.version.outputs.VERSION }}
+          body: |
+            # Lylacore v${{ steps.version.outputs.VERSION }}
+
+            ## Installation
+
+            ```bash
+            npm install @lylacore/core@${{ steps.version.outputs.VERSION }}
+            ```
+
+            ## Changes
+
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+
+            ## Platform Support
+
+            Pre-built binaries available for:
+            - Linux x64 (GNU & musl)
+            - Linux ARM64 (GNU & musl)
+            - macOS x64 (Intel)
+            - macOS ARM64 (Apple Silicon)
+            - Windows x64
+            - Windows ARM64
+
+            ---
+
+            Authors: Joysusy & Violet Klaudia 💖
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,236 @@
+# Authors: Joysusy & Violet Klaudia 💖
+# Benchmark Pipeline - Performance Tracking and Regression Detection
+
+name: Benchmarks
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Rust native benchmarks (baseline)
+  bench-rust:
+    name: Benchmark Rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: bench-rust
+
+      - name: Run Criterion benchmarks
+        run: |
+          cargo bench --workspace --no-fail-fast -- --output-format bencher | tee bench-rust.txt
+
+      - name: Convert to JSON
+        run: |
+          python3 -c "
+          import json
+          import re
+
+          results = []
+          with open('bench-rust.txt') as f:
+              for line in f:
+                  # Parse Criterion output: test name ... bench: 123,456 ns/iter
+                  match = re.search(r'test (\S+)\s+\.\.\. bench:\s+([\d,]+) ns/iter', line)
+                  if match:
+                      name = match.group(1)
+                      time_ns = float(match.group(2).replace(',', ''))
+                      results.append({
+                          'name': name,
+                          'mean': {'point_estimate': time_ns}
+                      })
+
+          with open('bench-rust.json', 'w') as f:
+              json.dump({'benchmarks': results}, f, indent=2)
+          "
+
+      - name: Upload Rust benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-rust
+          path: bench-rust.json
+
+  # Python bindings benchmarks
+  bench-python:
+    name: Benchmark Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/pyo3-bindings
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Build package
+        working-directory: crates/pyo3-bindings
+        run: |
+          uv venv
+          uv pip install maturin
+          source .venv/bin/activate
+          maturin develop --release
+
+      - name: Run Python benchmarks
+        working-directory: crates/pyo3-bindings
+        run: |
+          source .venv/bin/activate
+          python ../../benchmarks/python/bench_soul_crypto.py --json > ../../bench-python.json
+
+      - name: Upload Python benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-python
+          path: bench-python.json
+
+  # Node.js bindings benchmarks
+  bench-nodejs:
+    name: Benchmark Node.js
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/napi-bindings
+
+      - name: Install dependencies and build
+        working-directory: crates/napi-bindings
+        run: |
+          npm install
+          npm run build
+
+      - name: Run Node.js benchmarks
+        run: |
+          node benchmarks/nodejs/bench_soul_crypto.js --json > bench-nodejs.json
+
+      - name: Upload Node.js benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-nodejs
+          path: bench-nodejs.json
+
+  # Compare benchmarks and detect regressions
+  compare-benchmarks:
+    name: Compare Benchmarks
+    needs: [bench-rust, bench-python, bench-nodejs]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download all benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          path: benchmark-results
+
+      - name: Fetch baseline benchmarks
+        run: |
+          # Try to fetch baseline from main branch
+          git fetch origin main:main || true
+          if git show main:benchmarks/baseline.json > baseline.json 2>/dev/null; then
+            echo "Using baseline from main branch"
+          else
+            echo "No baseline found, using current as baseline"
+            cp benchmark-results/bench-rust/bench-rust.json baseline.json
+          fi
+
+      - name: Analyze Rust benchmarks
+        if: always()
+        run: |
+          python scripts/analyze_benchmarks.py \
+            --baseline baseline.json \
+            --current benchmark-results/bench-rust/bench-rust.json \
+            --output rust-comparison.md || true
+
+      - name: Analyze Python benchmarks
+        if: always()
+        run: |
+          python scripts/analyze_benchmarks.py \
+            --baseline baseline.json \
+            --current benchmark-results/bench-python/bench-python.json \
+            --output python-comparison.md || true
+
+      - name: Analyze Node.js benchmarks
+        if: always()
+        run: |
+          python scripts/analyze_benchmarks.py \
+            --baseline baseline.json \
+            --current benchmark-results/bench-nodejs/bench-nodejs.json \
+            --output nodejs-comparison.md || true
+
+      - name: Post results as PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let comment = '## 📊 Benchmark Results\n\n';
+
+            try {
+              const rustReport = fs.readFileSync('rust-comparison.md', 'utf8');
+              comment += '### Rust Native\n\n' + rustReport + '\n\n';
+            } catch (e) {}
+
+            try {
+              const pythonReport = fs.readFileSync('python-comparison.md', 'utf8');
+              comment += '### Python (PyO3)\n\n' + pythonReport + '\n\n';
+            } catch (e) {}
+
+            try {
+              const nodejsReport = fs.readFileSync('nodejs-comparison.md', 'utf8');
+              comment += '### Node.js (NAPI-RS)\n\n' + nodejsReport + '\n\n';
+            } catch (e) {}
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Upload comparison reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-reports
+          path: |
+            rust-comparison.md
+            python-comparison.md
+            nodejs-comparison.md

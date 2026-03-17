@@ -1,0 +1,173 @@
+# Authors: Joysusy & Violet Klaudia 💖
+
+name: Python Bindings CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'crates/pyo3-bindings/**'
+      - '.github/workflows/python-bindings.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'crates/pyo3-bindings/**'
+
+jobs:
+  test:
+    name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "."
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install maturin
+        run: uv pip install --system maturin
+
+      - name: Build wheel
+        working-directory: crates/pyo3-bindings
+        run: maturin build --release
+
+      - name: Install wheel
+        working-directory: crates/pyo3-bindings
+        shell: bash
+        run: |
+          WHEEL=$(ls ../../target/wheels/lylacore-*.whl | head -1)
+          uv pip install --system "$WHEEL"
+
+      - name: Install test dependencies
+        run: uv pip install --system pytest pytest-cov pytest-asyncio hypothesis
+
+      - name: Run tests
+        working-directory: crates/pyo3-bindings
+        run: pytest -v
+
+  build-wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          working-directory: crates/pyo3-bindings
+          args: --release --out dist
+          manylinux: auto
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: crates/pyo3-bindings/dist/*.whl
+
+  lint:
+    name: Lint and format check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Lint Python code
+        working-directory: crates/pyo3-bindings
+        run: |
+          ruff check python/ tests/
+          ruff format --check python/ tests/
+
+  coverage:
+    name: Code coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install maturin
+        run: uv pip install --system maturin
+
+      - name: Build wheel
+        working-directory: crates/pyo3-bindings
+        run: maturin build --release
+
+      - name: Install wheel and test dependencies
+        working-directory: crates/pyo3-bindings
+        shell: bash
+        run: |
+          WHEEL=$(ls ../../target/wheels/lylacore-*.whl | head -1)
+          uv pip install --system "$WHEEL"
+          uv pip install --system pytest pytest-cov pytest-asyncio hypothesis
+
+      - name: Run tests with coverage
+        working-directory: crates/pyo3-bindings
+        run: pytest --cov=lylacore --cov-report=xml --cov-report=term
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: crates/pyo3-bindings/coverage.xml
+          flags: python-bindings
+          name: python-bindings-coverage
