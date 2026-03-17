@@ -6,7 +6,7 @@ build-backend = "maturin"
 
 [project]
 name = "lylacore"
-version = "0.1.6"
+version = "0.1.7"
 description = "Python bindings for Lylacore (soul-crypto + coach-engine)"
 authors = [
     { name = "Joysusy", email = "susy@lissomedev.com" },
