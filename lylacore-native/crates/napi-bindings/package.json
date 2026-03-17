@@ -9,9 +9,9 @@
   },
   "scripts": {
     "artifacts": "napi artifacts",
-    "build": "napi build --platform --release",
-    "build:debug": "napi build --platform",
-    "build:release": "napi build --platform --release",
+    "build": "napi build --release",
+    "build:debug": "napi build",
+    "build:release": "napi build --release",
     "prepublishOnly": "napi prepublish -t npm",
     "test": "node --test tests/*.test.js",
     "universal": "napi universal",
