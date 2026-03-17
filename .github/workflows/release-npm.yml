@@ -95,6 +95,7 @@ jobs:
 
       - name: Build native addon
         working-directory: lylacore-native/crates/napi-bindings
+        shell: bash
         run: |
           if [[ "${{ matrix.settings.target }}" == *"musl"* ]]; then
             npm run build -- --target ${{ matrix.settings.target }} -x
