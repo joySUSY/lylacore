@@ -1,6 +1,6 @@
 {
   "name": "@lylacore/core",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Node.js native bindings for Lylacore (soul-crypto + coach-engine)",
   "main": "index.js",
   "types": "index.d.ts",
@@ -42,13 +42,13 @@
     "access": "public"
   },
   "optionalDependencies": {
-    "@lylacore/darwin-arm64": "0.1.10",
-    "@lylacore/darwin-x64": "0.1.10",
-    "@lylacore/linux-arm64-gnu": "0.1.10",
-    "@lylacore/linux-arm64-musl": "0.1.10",
-    "@lylacore/linux-x64-gnu": "0.1.10",
-    "@lylacore/linux-x64-musl": "0.1.10",
-    "@lylacore/win32-arm64-msvc": "0.1.10",
-    "@lylacore/win32-x64-msvc": "0.1.10"
+    "@lylacore/darwin-arm64": "0.1.11",
+    "@lylacore/darwin-x64": "0.1.11",
+    "@lylacore/linux-arm64-gnu": "0.1.11",
+    "@lylacore/linux-arm64-musl": "0.1.11",
+    "@lylacore/linux-x64-gnu": "0.1.11",
+    "@lylacore/linux-x64-musl": "0.1.11",
+    "@lylacore/win32-arm64-msvc": "0.1.11",
+    "@lylacore/win32-x64-msvc": "0.1.11"
   }
 }
