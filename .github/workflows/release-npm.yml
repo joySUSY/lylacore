@@ -1,6 +1,6 @@
 # Authors: Joysusy & Violet Klaudia 💖
 # npm Release Pipeline - Build and Publish Node.js Native Addons
-# Based on NAPI-RS Industrial Template
+# Based on NAPI-RS Official Template (Docker for Linux cross-compilation)
 
 name: Release npm
 
@@ -16,44 +16,55 @@ env:
 jobs:
   build:
     name: build-${{ matrix.settings.target }}
-    runs-on: ${{ matrix.settings.os }}
+    runs-on: ${{ matrix.settings.host }}
     strategy:
       fail-fast: false
       matrix:
         settings:
-          # Linux GNU targets
-          - os: ubuntu-latest
+          # Linux x64 GNU (native build)
+          - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             package: linux-x64-gnu
 
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            package: linux-arm64-gnu
-
-          # Linux musl targets
-          - os: ubuntu-latest
+          # Linux musl targets (Docker build)
+          - host: ubuntu-latest
             target: x86_64-unknown-linux-musl
             package: linux-x64-musl
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+            build: npm install && npm run build -- --target x86_64-unknown-linux-musl
 
-          - os: ubuntu-latest
+          - host: ubuntu-latest
             target: aarch64-unknown-linux-musl
             package: linux-arm64-musl
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+            build: |-
+              set -e &&
+              rustup target add aarch64-unknown-linux-musl &&
+              npm install &&
+              npm run build -- --target aarch64-unknown-linux-musl
 
-          # macOS targets
-          - os: macos-latest
+          # Linux aarch64 GNU (Docker build)
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            package: linux-arm64-gnu
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
+            build: npm install && npm run build -- --target aarch64-unknown-linux-gnu
+
+          # macOS targets (native build)
+          - host: macos-latest
             target: x86_64-apple-darwin
             package: darwin-x64
 
-          - os: macos-latest
+          - host: macos-latest
             target: aarch64-apple-darwin
             package: darwin-arm64
 
-          # Windows targets
-          - os: windows-latest
+          # Windows targets (native build)
+          - host: windows-latest
             target: x86_64-pc-windows-msvc
             package: win32-x64-msvc
 
-          - os: windows-latest
+          - host: windows-latest
             target: aarch64-pc-windows-msvc
             package: win32-arm64-msvc
 
@@ -66,37 +77,38 @@ jobs:
           node-version: '20'
 
       - name: Setup Rust
+        if: ${{ !matrix.settings.docker }}
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.settings.target }}
 
-      - name: Cache cargo and build artifacts
-        uses: actions/cache@v4
+      - name: Cache Rust dependencies
+        if: ${{ !matrix.settings.docker }}
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo
-            ./target
-          key: ${{ matrix.settings.target }}-cargo-cache
+          shared-key: release-${{ matrix.settings.target }}
+          workspaces: lylacore-native/crates/napi-bindings
 
       - name: Install dependencies
+        if: ${{ !matrix.settings.docker }}
         working-directory: lylacore-native/crates/napi-bindings
         run: npm install
 
-      - name: Build (unified strategy with napi-cross)
-        working-directory: lylacore-native/crates/napi-bindings
-        shell: bash
-        run: |
-          TARGET="${{ matrix.settings.target }}"
+      - name: Build native addon (Docker)
+        if: ${{ matrix.settings.docker }}
+        uses: addnab/docker-run-action@v3
+        with:
+          image: ${{ matrix.settings.docker }}
+          options: >-
+            -v ${{ github.workspace }}:/build
+            -w /build/lylacore-native/crates/napi-bindings
+            -e CARGO_TERM_COLOR=always
+          run: ${{ matrix.settings.build }}
 
-          if [[ "$TARGET" == *"musl"* || "$TARGET" == *"aarch64"* ]]; then
-            echo "Cross-compilation target detected: $TARGET"
-            echo "Using --use-napi-cross for automatic toolchain management"
-            npx napi build --release --target $TARGET --use-napi-cross
-          else
-            echo "Native target detected: $TARGET"
-            echo "Using standard build"
-            npx napi build --release --target $TARGET
-          fi
+      - name: Build native addon (Native)
+        if: ${{ !matrix.settings.docker }}
+        working-directory: lylacore-native/crates/napi-bindings
+        run: npm run build -- --target ${{ matrix.settings.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
